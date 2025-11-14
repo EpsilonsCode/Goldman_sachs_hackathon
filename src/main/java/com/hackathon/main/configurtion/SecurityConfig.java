@@ -13,17 +13,24 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-        // OIDC logout handler
+
+        // Logout handler for OIDC
         OidcClientInitiatedLogoutSuccessHandler oidcLogoutSuccessHandler =
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
         oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/");
 
         http
+                // Protect all requests
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").authenticated()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
+                // OAuth2 login for browser
                 .oauth2Login(Customizer.withDefaults())
+                // Resource server for token-based API access (non-deprecated style)
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(Customizer.withDefaults()) // <-- new recommended style
+                )
+                // Logout
                 .logout(logout -> logout
                         .logoutSuccessHandler(oidcLogoutSuccessHandler)
                         .permitAll()
