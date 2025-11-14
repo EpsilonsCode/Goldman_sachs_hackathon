@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  spring-app:
+    build: .
+    container_name: spring-app
+    depends_on:
+      - mongodb
+      - keycloak
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/mydatabase
+      SERVER_PORT: 8762
+    ports:
+      - "8762:8762"
+    networks:
+      - backend
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: mydatabase
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    container_name: keycloak
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import
+    ports:
+      - "8180:8080"
+    networks:
+      - backend
+
+volumes:
+  mongo_data:
+
+networks:
+  backend:
+    driver: bridge
