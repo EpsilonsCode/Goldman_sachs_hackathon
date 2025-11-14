@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 @Setter
 
-public class Task {
+public class    Task {
     @Id
     private String id;
     private String name;
