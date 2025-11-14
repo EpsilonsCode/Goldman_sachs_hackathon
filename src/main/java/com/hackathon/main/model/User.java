@@ -9,6 +9,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Document(collection = "users")
 @Getter
 @Setter
@@ -27,6 +30,7 @@ public class User {
     @NotEmpty
     private Role role;
     private String team_name;
-    //TODO: list of tasks
+
+    private List<Task> tasks = new ArrayList<>();
 
 }

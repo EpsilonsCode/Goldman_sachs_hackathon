@@ -8,6 +8,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "solutions")
 @Getter
@@ -21,5 +23,6 @@ public class Solution {
     private String task_id;
     private int score;
     private Instant submissionTimestamp;
-    //TODO: task files
+
+    private List<TaskFile> file = new ArrayList<>();
 }
