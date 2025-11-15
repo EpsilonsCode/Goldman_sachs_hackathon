@@ -2,7 +2,6 @@ package com.hackathon.main.controller;
 
 import com.hackathon.main.model.Hackathon;
 import com.hackathon.main.service.HackathonService;
-import jakarta.ws.rs.Path;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
