@@ -109,12 +109,13 @@ export const HackathonProvider = ({ children }) => {
     }, [api, user]);
 
     // Get only the hackathons the current participant is part of
-    const myHackathons = useMemo(() => { // <--- THIS IS THE LINE THAT WAS CRASHING
+    const myHackathons = useMemo(() => {
         if (!user || user.role !== 'PARTICIPANT') {
             return [];
         }
+        // --- FIX: Use 'users' instead of 'userIds' ---
         return allHackathons.filter(hack =>
-            hack.userIds && hack.userIds.includes(user.id)
+            hack.users && hack.users.includes(user.id)
         );
     }, [allHackathons, user]);
 
