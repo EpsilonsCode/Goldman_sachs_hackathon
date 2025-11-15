@@ -24,6 +24,12 @@ public class SolutionController {
         return solutionService.getAllSolutions();
     }
 
+    @GetMapping("/leaderboard/{taskId}")
+    public ResponseEntity<List<Solution>> getLeaderboard(@PathVariable String taskId) {
+        List<Solution> leaderboard = solutionService.getLeaderboardForTask(taskId);
+        return ResponseEntity.ok(leaderboard);
+    }
+
     @DeleteMapping("/solutions/{id}")
     public ResponseEntity<Void> deleteSolution(@PathVariable String id) {
         try {
@@ -33,4 +39,18 @@ public class SolutionController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    @GetMapping("/solutions/task/{taskId}")
+    public ResponseEntity<List<Solution>> getSolutionsForTask(@PathVariable String taskId) {
+        List<Solution> solutions = solutionService.getSolutionsForTask(taskId);
+        return ResponseEntity.ok(solutions);
+    }
+
+    @GetMapping("/solutions/user/{userId}")
+    public ResponseEntity<List<Solution>> getSolutionsForUser(@PathVariable String userId) {
+        List<Solution> solutions = solutionService.getSolutionsForUser(userId);
+        return ResponseEntity.ok(solutions);
+    }
+
+
 }

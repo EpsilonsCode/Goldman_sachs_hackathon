@@ -1,13 +1,9 @@
 package com.hackathon.main.service;
 
-import com.hackathon.main.dto.CreateUserDto;
 import com.hackathon.main.model.Solution;
-import com.hackathon.main.model.User;
 import com.hackathon.main.repository.SolutionRepository;
 import lombok.RequiredArgsConstructor;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -18,6 +14,14 @@ import java.util.List;
 public class SolutionService {
     private final SolutionRepository solutionRepository;
     //TODO: submitSolution()
+
+    public List<Solution> getLeaderboardForTask(String taskId) {
+        Sort sort = Sort.by(
+                Sort.Order.desc("score"),
+                Sort.Order.asc("submissionTimestamp")
+        );
+        return solutionRepository.findByTaskId(taskId, sort);
+    }
 
     public void deleteSolution(String id) {
         if (!solutionRepository.existsById(id)) {
