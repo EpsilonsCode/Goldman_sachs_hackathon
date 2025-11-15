@@ -70,14 +70,12 @@ export const apiFactory = (token, login) => {
                 body: JSON.stringify(userDto)
             });
         },
-        // --- NEW FUNCTION ---
         updateUser: function(userId, updateUserDto) {
             return fetchWithAuth(`/api/users/${userId}`, {
                 method: "PUT",
                 body: JSON.stringify(updateUserDto)
             });
         },
-        // --------------------
         deleteUser: function(userId) {
             return fetchWithAuth(`/api/users/${userId}`, {
                 method: "DELETE"
@@ -88,6 +86,9 @@ export const apiFactory = (token, login) => {
         },
         getUsersByRole: function(role) {
             return fetchWithAuth(`/api/users/role/${role}`);
+        },
+        getSubmissionHistory: function(userId) {
+            return fetchWithAuth(`/api/users/${userId}/history`);
         },
 
         // === Task API (TaskController.java) ===
@@ -116,11 +117,15 @@ export const apiFactory = (token, login) => {
             });
         },
         updateTaskDetails: function(task) {
-            // Uses the POST /api/tasks (JSON) endpoint.
-            // Spring Data's save() will update if an ID is present.
-            return fetchWithAuth("/api/tasks", {
+            // TaskController POST handles both create and update
+            const formData = new FormData();
+            formData.append("task", new Blob([JSON.stringify(task)], {
+                type: "application/json"
+            }));
+
+            return fetchWithAuthFormData("/api/tasks", {
                 method: "POST",
-                body: JSON.stringify(task)
+                body: formData
             });
         },
         addFilesToTask: function(taskId, files) {
@@ -154,16 +159,13 @@ export const apiFactory = (token, login) => {
 
         // === Solution API (SolutionController.java) ===
 
-        submitSolution: function(userId, taskId, files) {
+        submitSolution: function(userId, taskId, file) {
             const formData = new FormData();
             formData.append("userId", userId);
             formData.append("taskId", taskId);
+            formData.append("file", file);
 
-            Array.from(files).forEach(file => {
-                formData.append("files", file);
-            });
-
-            return fetchWithAuthFormData("/api/solutions", {
+            return fetchWithAuthFormData("/api/solutions/submit", {
                 method: "POST",
                 body: formData
             });
@@ -172,7 +174,7 @@ export const apiFactory = (token, login) => {
             return fetchWithAuth("/api/solutions");
         },
         getLeaderboardForTask: function(taskId) {
-            return fetchWithAuth(`/api/solutions/leaderboard/${taskId}`);
+            return fetchWithAuth(`/api/leaderboard/${taskId}`);
         },
         getSolutionsForUser: function(userId) {
             return fetchWithAuth(`/api/solutions/user/${userId}`);
@@ -182,6 +184,54 @@ export const apiFactory = (token, login) => {
         },
         deleteSolution: function(solutionId) {
             return fetchWithAuth(`/api/solutions/${solutionId}`, {
+                method: "DELETE"
+            });
+        },
+
+        // === Hackathon API (HackathonController.java) ===
+
+        getHackathons: function() {
+            return fetchWithAuth("/api/hackathons");
+        },
+        getHackathonById: function(hackId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}`);
+        },
+        createHackathon: function(hackathonData) {
+            return fetchWithAuth("/api/hackathons", {
+                method: "POST",
+                body: JSON.stringify(hackathonData)
+            });
+        },
+        updateHackathon: function(hackId, hackathonData) {
+            return fetchWithAuth(`/api/hackathons/${hackId}`, {
+                method: "PUT",
+                body: JSON.stringify(hackathonData)
+            });
+        },
+        deleteHackathon: function(hackId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}`, {
+                method: "DELETE"
+            });
+        },
+        addTaskToHackathon: function(hackId, taskId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}/tasks/${taskId}`, {
+                method: "PUT",
+                body: JSON.stringify({}) // PUT requires a body, even if empty
+            });
+        },
+        removeTaskFromHackathon: function(hackId, taskId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}/tasks/${taskId}`, {
+                method: "DELETE"
+            });
+        },
+        addUserToHackathon: function(hackId, userId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}/users/${userId}`, {
+                method: "PUT",
+                body: JSON.stringify({}) // PUT requires a body, even if empty
+            });
+        },
+        removeUserFromHackathon: function(hackId, userId) {
+            return fetchWithAuth(`/api/hackathons/${hackId}/users/${userId}`, {
                 method: "DELETE"
             });
         }
