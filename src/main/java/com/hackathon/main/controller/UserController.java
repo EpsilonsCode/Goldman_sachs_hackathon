@@ -3,24 +3,27 @@ package com.hackathon.main.controller;
 import com.hackathon.main.dto.CreateUserDto;
 import com.hackathon.main.dto.UpdateUserDto; // <-- IMPORT
 import com.hackathon.main.model.Role;
+import com.hackathon.main.model.Solution;
 import com.hackathon.main.model.User;
+import com.hackathon.main.service.SolutionService;
 import com.hackathon.main.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+    private final SolutionService solutionService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     @PostMapping()
     public ResponseEntity<User> createUser(@RequestBody CreateUserDto user) {
@@ -92,6 +95,15 @@ public class UserController {
     @GetMapping("/current")
     public User getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         System.out.println(jwt.getClaims());
-        return userService.getCurrentLoggedInUser(jwt)
-                ;    }
+        return userService.getCurrentLoggedInUser(jwt);
+    }
+    @GetMapping("/{id}/history")
+    public ResponseEntity<Map<String, List<Solution>>> getSubmissionHistory(@PathVariable String id) {
+        // Sprawdzamy, czy user istnieje (getUserById rzuci wyjątek, jeśli nie)
+        userService.getUserById(id);
+
+        // Pobieramy pogrupowaną historię
+        Map<String, List<Solution>> history = solutionService.getGroupedSolutionsForUser(id);
+        return ResponseEntity.ok(history);
+    }
 }

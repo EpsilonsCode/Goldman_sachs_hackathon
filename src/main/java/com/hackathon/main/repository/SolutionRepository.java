@@ -10,12 +10,10 @@ import java.util.Optional;
 
 @Repository
 public interface SolutionRepository extends MongoRepository<Solution, String> {
-    @Query("{ 'user_id': ?0 }")
-    List<Solution> findByUser_id(String user_id);
+    List<Solution> findByUserId(String user_id);
+    List<Solution> findByTaskId(String task_id);
     @Query("{ 'task_id': ?0 }")
-    List<Solution> findByTask_id(String task_id);
-    @Query("{ 'task_id': ?0 }")
-    List<Solution> findByTask_id(String task_id, Sort sort);
+    List<Solution> findByTaskId(String task_id, Sort sort);
     @Query("{ 'user_id': ?0, 'task_id': ?1 }")
     Optional<Solution> findByUser_idAndTask_id(String user_id, String task_id);
 }
