@@ -1,6 +1,7 @@
 package com.hackathon.main.controller;
 
 import com.hackathon.main.dto.CreateUserDto;
+import com.hackathon.main.dto.UpdateUserDto; // <-- IMPORT
 import com.hackathon.main.model.Role;
 import com.hackathon.main.model.User;
 import com.hackathon.main.service.UserService;
@@ -26,6 +27,20 @@ public class UserController {
         User savedUser = userService.addUser(user);
         return ResponseEntity.ok(savedUser);
     }
+
+    // --- NEW ENDPOINT ---
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody UpdateUserDto userDto) {
+        try {
+            User updatedUser = userService.updateUser(id, userDto);
+            return ResponseEntity.ok(updatedUser);
+        } catch (RuntimeException e) {
+            // Log the error
+            e.printStackTrace();
+            return ResponseEntity.notFound().build();
+        }
+    }
+    // --------------------
 
     @GetMapping()
     public List<User> getAllUsers() {
@@ -78,5 +93,5 @@ public class UserController {
     public User getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         System.out.println(jwt.getClaims());
         return userService.getCurrentLoggedInUser(jwt)
-;    }
+                ;    }
 }

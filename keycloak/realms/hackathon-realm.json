@@ -5,7 +5,7 @@
     "realm": [
       { "name": "admin" },
       { "name": "judge" },
-      { "name": "user" }
+      { "name": "participant" }
     ]
   },
   "clients": [
@@ -19,7 +19,7 @@
       "directAccessGrantsEnabled": true,
       "standardFlowEnabled": true,
       "fullScopeAllowed": true,
-      "defaultClientScopes": ["role_list", "profile", "email"]
+      "defaultClientScopes": ["roles", "profile", "email"]
     }
   ]
 }
