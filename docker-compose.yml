@@ -10,8 +10,30 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/mydatabase
       SERVER_PORT: 8762
+      KEYCLOAK_URL: http://keycloak:8080
+      SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/hackathon
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/hackathon
+      spring.security.oauth2.client.provider.keycloak.issuer-uri: http://keycloak:8080/realms/hackathon
+#      spring.security.oauth2.resourceserver.jwt.issuer-uri: http://keycloak:8080/realms/hackathon
+#      spring.security.oauth2.resourceserver.jwt.jwk-set-uri: http://keycloak:8080/realms/hackathon
+
     ports:
       - "8762:8762"
+    networks:
+      - backend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        REACT_APP_BACKEND_URL: ""
+        REACT_APP_KEYCLOAK_URL: http://keycloak:8080
+    container_name: frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - spring-app
     networks:
       - backend
 
