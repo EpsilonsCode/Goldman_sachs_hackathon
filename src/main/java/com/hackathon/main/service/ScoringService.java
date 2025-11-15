@@ -22,16 +22,17 @@ public class ScoringService {
         String submittedSolution = new String(file.getBytes());
 
 
-        List<Integer> correct = fileToList(correctSolution, taskFile.getContentType());
-        List<Integer> submitted = fileToList(submittedSolution, file.getContentType());
-        if (correct.size() != submitted.size())
+        List<Double> correct = fileToList(correctSolution, taskFile.getContentType());
+        List<Double> submitted = fileToList(submittedSolution, file.getContentType());
+        if(correct.size() != submitted.size())
             throw new Exception();
         double output = rmse(correct, submitted);
         int score = (int) Math.max(0, 100 - output * 3);
         return score;
     }
 
-    private static List<Integer> fileToList(String content, String type) throws Exception {
+    private static List<Double> fileToList(String content, String type) throws Exception {
+
 
 
         // 1. JSON ARRAY → must start with "[" and end with "]"
@@ -47,9 +48,9 @@ public class ScoringService {
 
                 String[] parts = inner.split(",");
 
-                List<Integer> result = new ArrayList<>();
+                List<Double> result = new ArrayList<>();
                 for (String part : parts) {
-                    result.add(Integer.parseInt(part.trim()));
+                    result.add(Double.parseDouble(part.trim()));
                 }
                 return result;
             } catch (Exception e) {
@@ -67,7 +68,7 @@ public class ScoringService {
             try {
                 return Arrays.stream(content.split(","))
                         .map(String::trim)
-                        .map(Integer::parseInt)
+                        .map(Double::parseDouble)
                         .toList();
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse CSV array", e);
@@ -78,7 +79,7 @@ public class ScoringService {
         throw new IllegalArgumentException("Unsupported file type: " + type);
     }
 
-    private static double rmse(List<Integer> a, List<Integer> b) {
+    private static double rmse(List<Double> a, List<Double> b) {
         if (a.size() != b.size()) {
             throw new IllegalArgumentException("Arrays must have the same length");
         }
@@ -91,4 +92,5 @@ public class ScoringService {
 
         return Math.sqrt(sum / a.size());
     }
+
 }
