@@ -1,5 +1,8 @@
 // src/api.js
 
+// Use an environment variable for the base URL. Default to "" for relative paths.
+const BASE_URL = process.env.REACT_APP_BACKEND_URL || "";
+
 /**
  * Creates an API client instance.
  * @param {string} token - The Keycloak auth token.
@@ -10,7 +13,7 @@ export const apiFactory = (token, login) => {
 
     // Helper for JSON requests
     const fetchWithAuth = async (url, options = {}) => {
-        const response = await fetch(url, {
+        const response = await fetch(BASE_URL + url, { // <-- PREPEND BASE_URL
             ...options,
             headers: {
                 "Content-Type": "application/json",
@@ -33,7 +36,7 @@ export const apiFactory = (token, login) => {
 
     // Helper for FormData requests (file uploads)
     const fetchWithAuthFormData = async (url, options = {}) => {
-        const response = await fetch(url, {
+        const response = await fetch(BASE_URL + url, { // <-- PREPEND BASE_URL
             ...options,
             headers: {
                 // DO NOT set Content-Type here. Browser will set it
@@ -116,7 +119,6 @@ export const apiFactory = (token, login) => {
                 body: formData
             });
         },
-        // --- MODIFIED FUNCTION ---
         updateTaskDetails: function(taskId, taskDetails) {
             // Calls the new PUT endpoint with only text details
             return fetchWithAuth(`/api/tasks/${taskId}`, {
@@ -124,7 +126,6 @@ export const apiFactory = (token, login) => {
                 body: JSON.stringify(taskDetails) // Sends {name, description}
             });
         },
-        // --- END MODIFICATION ---
         addFilesToTask: function(taskId, files) {
             const formData = new FormData();
             Array.from(files).forEach(file => {
@@ -156,7 +157,7 @@ export const apiFactory = (token, login) => {
             });
         },
         downloadTaskFile: async function(taskId, fileIndex) {
-            const response = await fetch(`/api/tasks/${taskId}/files/${fileIndex}`, {
+            const response = await fetch(BASE_URL + `/api/tasks/${taskId}/files/${fileIndex}`, { // <-- PREPEND BASE_URL
                 headers: { "Authorization": `Bearer ${token}` }
             });
             if (!response.ok) throw new Error(response.statusText);
