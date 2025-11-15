@@ -4,29 +4,31 @@ import {
     ChevronDown, Upload, Trophy, Users, Calendar,
     CheckCircle, XCircle, AlertCircle, LogOut, Settings,
     Plus, FileText, Code, Database, BarChart3, Clock, Award,
-    Menu, X, Download, Trash2, Edit
+    Menu, X, Download, Trash2, Edit, ListChecks, Briefcase, ArrowRightLeft
 } from 'lucide-react';
-import { AuthProvider, useAuth } from "./AuthProvider";
+// Import the new providers
+import { AuthProvider, useAuth, HackathonProvider, useHackathon } from "./AuthProvider";
 
 // Reusable hook to fetch users/tasks for mapping IDs to names
 const useDataCache = (api) => {
     const [users, setUsers] = useState(new Map());
     const [tasks, setTasks] = useState(new Map());
+    const [hackathons, setHackathons] = useState(new Map());
 
     const loadData = async () => {
         if (!api) return;
         try {
             const usersData = await api.getUsers();
             setUsers(new Map(usersData.map(u => [u.id, u.username])));
-        } catch (e) {
-            console.error("Failed to fetch users", e);
-        }
+        } catch (e) { console.error("Failed to fetch users", e); }
         try {
             const tasksData = await api.getTasks();
             setTasks(new Map(tasksData.map(t => [t.id, t.name])));
-        } catch (e) {
-            console.error("Failed to fetch tasks", e);
-        }
+        } catch (e) { console.error("Failed to fetch tasks", e); }
+        try {
+            const hackathonData = await api.getHackathons();
+            setHackathons(new Map(hackathonData.map(h => [h.id, h.name])));
+        } catch (e) { console.error("Failed to fetch hackathons", e); }
     };
 
     useEffect(() => {
@@ -36,6 +38,11 @@ const useDataCache = (api) => {
     return {
         getUserName: (id) => users.get(id) || 'Unknown User',
         getTaskName: (id) => tasks.get(id) || 'Unknown Task',
+        getHackathonName: (id) => hackathons.get(id) || 'Unknown Hackathon',
+
+        getAllUsers: () => Array.from(users, ([id, username]) => ({ id, username })),
+        getAllTasks: () => Array.from(tasks, ([id, name]) => ({ id, name })),
+
         refresh: loadData // Function to manually refresh cache
     };
 };
@@ -43,6 +50,8 @@ const useDataCache = (api) => {
 // --- Navigation Component ---
 const Navigation = ({ api }) => {
     const { user, logout } = useAuth();
+    // Get hackathon context
+    const { selectedHackathon, clearHackathon } = useHackathon();
     const [activeTab, setActiveTab] = useState('challenges');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -63,6 +72,20 @@ const Navigation = ({ api }) => {
                     <div className="flex items-center space-x-2">
                         <Code className="w-8 h-8"/>
                         <span className="font-bold text-xl">HackPlatform</span>
+                        {/* NEW: Show selected hackathon and switch button */}
+                        {user.role === 'PARTICIPANT' && selectedHackathon && (
+                            <div className="flex items-center space-x-2 pl-2 border-l border-white/30 ml-2">
+                                <Briefcase className="w-5 h-5 opacity-80" />
+                                <span className="font-medium">{selectedHackathon.name}</span>
+                                <button
+                                    onClick={clearHackathon}
+                                    className="p-1 rounded-lg hover:bg-white/10"
+                                    title="Switch Hackathon"
+                                >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Desktop Navigation */}
@@ -112,6 +135,22 @@ const Navigation = ({ api }) => {
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
                     <div className="md:hidden pb-4">
+                        {/* NEW: Mobile Switch Hackathon */}
+                        {user.role === 'PARTICIPANT' && selectedHackathon && (
+                            <div className="px-4 py-3 border-b border-white/20">
+                                <div className="text-sm font-medium">{selectedHackathon.name}</div>
+                                <button
+                                    onClick={() => {
+                                        clearHackathon();
+                                        setMobileMenuOpen(false);
+                                    }}
+                                    className="text-sm opacity-80 flex items-center space-x-1"
+                                >
+                                    <ArrowRightLeft className="w-4 h-4" />
+                                    <span>Switch Hackathon</span>
+                                </button>
+                            </div>
+                        )}
                         {visibleTabs.map(tab => {
                             const Icon = tab.icon;
                             return (
@@ -157,7 +196,7 @@ const TabContent = ({ activeTab, api }) => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {activeTab === 'challenges' && <ChallengesPage api={api} />}
+            {activeTab === 'challenges' && <ChallengesPage api={api} cache={cache} />}
             {activeTab === 'leaderboard' && <LeaderboardPage api={api} cache={cache} />}
             {activeTab === 'submissions' && <SubmissionsPage api={api} cache={cache} />}
             {activeTab === 'admin' && <AdminPage api={api} cache={cache} />}
@@ -181,37 +220,136 @@ const EmptyState = ({ icon: Icon, message }) => (
     </div>
 );
 
-// --- Challenges Page ---
-const ChallengesPage = ({ api }) => {
+// --- NEW Minimal Header (with Logout) ---
+const MinimalHeader = () => {
+    const { user, logout } = useAuth();
+
+    return (
+        <nav className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                    <div className="flex items-center space-x-2">
+                        <Code className="w-8 h-8"/>
+                        <span className="font-bold text-xl">HackPlatform</span>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                        <div className="text-right">
+                            <div className="text-sm font-medium">{user?.username}</div>
+                            <div className="text-xs opacity-80">{user?.team_name || 'No team'}</div>
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                            title="Logout"
+                        >
+                            <LogOut className="w-5 h-5"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+};
+
+// --- HackathonSelector Component ---
+const HackathonSelector = () => {
+    const { myHackathons, selectHackathon, loadingHackathons } = useHackathon();
+    const { user } = useAuth();
+
+    if (loadingHackathons) {
+        return <LoadingSpinner />;
+    }
+
+    return (
+        <div className="max-w-4xl mx-auto px-4 py-12">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {user.username}!</h1>
+            <p className="text-lg text-gray-600 mb-8">Please select a hackathon to continue.</p>
+
+            {myHackathons.length === 0 ? (
+                <EmptyState icon={Briefcase} message="You are not registered for any hackathons." />
+            ) : (
+                <div className="grid md:grid-cols-2 gap-6">
+                    {myHackathons.map(hack => (
+                        <div
+                            key={hack.id}
+                            onClick={() => selectHackathon(hack)}
+                            className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-indigo-500 p-6"
+                        >
+                            <div className="flex items-center space-x-3 mb-3">
+                                <Briefcase className="w-8 h-8 text-indigo-600" />
+                                <h2 className="text-2xl font-bold text-gray-900">{hack.name}</h2>
+                            </div>
+                            <p className="text-gray-600 mb-4 line-clamp-2">{hack.description || "No description."}</p>
+                            <div className="flex justify-between items-center text-sm text-gray-500">
+                                <span className="flex items-center">
+                                    <Users className="w-4 h-4 mr-1" />
+                                    {hack.userIds?.length || 0} Participants
+                                </span>
+                                <span className="flex items-center">
+                                    <Database className="w-4 h-4 mr-1" />
+                                    {hack.taskIds?.length || 0} Challenges
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- Challenges Page (FIXED) ---
+const ChallengesPage = ({ api, cache }) => {
+    const { user } = useAuth(); // <-- Get user
+    const { selectedHackathon } = useHackathon();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTask, setSelectedTask] = useState(null);
 
-    const loadTasks = async () => {
-        setLoading(true);
-        try {
-            const data = await api.getTasks();
-            setTasks(data);
-        } catch (error) {
-            console.error('Failed to load tasks:', error);
-            alert('Failed to load tasks: ' + error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // This now loads tasks based on role
     useEffect(() => {
-        if(api) loadTasks();
-    }, [api]);
+        setLoading(true);
+        if (user.role === 'PARTICIPANT') {
+            // --- PARTICIPANT LOGIC ---
+            if (!selectedHackathon) {
+                setTasks([]);
+                setLoading(false);
+                return; // Wait for selection
+            }
+            const allTasks = cache.getAllTasks();
+            const hackathonTaskIds = selectedHackathon.taskIds || [];
+            const filteredTasks = allTasks.filter(task => hackathonTaskIds.includes(task.id));
+            setTasks(filteredTasks);
+            setLoading(false);
+        } else {
+            // --- ADMIN/JUDGE LOGIC ---
+            api.getTasks()
+                .then(data => {
+                    setTasks(data);
+                })
+                .catch(error => {
+                    console.error('Failed to load tasks:', error);
+                    alert('Failed to load tasks: ' + error.message);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+    }, [api, cache, selectedHackathon, user.role]);
 
     if (loading) return <LoadingSpinner />;
 
+    // Conditional title
+    const title = user.role === 'PARTICIPANT'
+        ? `Challenges for ${selectedHackathon.name}`
+        : "All Active Challenges";
+
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Active Challenges</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">{title}</h1>
 
             {tasks.length === 0 ? (
-                <EmptyState icon={Code} message="No challenges available yet" />
+                <EmptyState icon={Code} message="No challenges available." />
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {tasks.map(task => (
@@ -268,10 +406,14 @@ const TaskCard = ({ task, onClick }) => {
 const TaskDetailModal = ({ task, onClose, api }) => {
     const { user } = useAuth();
     const [submitting, setSubmitting] = useState(false);
-    const [files, setFiles] = useState(null); // Store FileList object
+    const [file, setFile] = useState(null); // <-- Stores a single file
 
     const handleFileChange = (e) => {
-        setFiles(e.target.files); // Store the FileList
+        if (e.target.files.length > 0) {
+            setFile(e.target.files[0]); // <-- Store only the first file
+        } else {
+            setFile(null);
+        }
     };
 
     const handleDownload = async (fileIndex, file) => {
@@ -290,14 +432,15 @@ const TaskDetailModal = ({ task, onClose, api }) => {
     };
 
     const handleSubmit = async () => {
-        if (!files || files.length === 0) {
-            alert('Please select at least one file');
+        if (!file) {
+            alert('Please select a file');
             return;
         }
 
         setSubmitting(true);
         try {
-            await api.submitSolution(user.id, task.id, files);
+            // Pass the single file, matching the new backend endpoint
+            await api.submitSolution(user.id, task.id, file);
             alert('Solution submitted successfully!');
             onClose();
         } catch (error) {
@@ -359,86 +502,99 @@ const TaskDetailModal = ({ task, onClose, api }) => {
                         </div>
                     )}
 
-                    {/* Submit Solution */}
-                    <div className="border-t pt-6">
-                        <h3 className="text-lg font-semibold mb-3 flex items-center">
-                            <Upload className="w-5 h-5 mr-2 text-indigo-600" />
-                            Submit Your Solution
-                        </h3>
+                    {/* Submit Solution (Only for PARTICIPANT) */}
+                    {user.role === 'PARTICIPANT' && (
+                        <div className="border-t pt-6">
+                            <h3 className="text-lg font-semibold mb-3 flex items-center">
+                                <Upload className="w-5 h-5 mr-2 text-indigo-600" />
+                                Submit Your Solution
+                            </h3>
 
-                        <div className="space-y-4">
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-500 transition-colors">
-                                <input
-                                    type="file"
-                                    multiple
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                    id="file-upload"
-                                    accept=".csv,.json,.py,.ipynb,.zip"
-                                />
-                                <label htmlFor="file-upload" className="cursor-pointer">
-                                    <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                                    <p className="text-gray-600 mb-1">Click to upload files</p>
-                                    <p className="text-sm text-gray-500">CSV, JSON, Python, ZIP, etc.</p>
-                                </label>
-                            </div>
+                            <div className="space-y-4">
+                                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-500 transition-colors">
+                                    <input
+                                        type="file"
+                                        // multiple // <-- Removed multiple
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        id="file-upload"
+                                        accept=".csv,.json,.py,.ipynb,.zip"
+                                    />
+                                    <label htmlFor="file-upload" className="cursor-pointer">
+                                        <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                                        <p className="text-gray-600 mb-1">Click to upload a file</p>
+                                        <p className="text-sm text-gray-500">CSV, JSON, Python, ZIP, etc.</p>
+                                    </label>
+                                </div>
 
-                            {files && files.length > 0 && (
-                                <div className="space-y-2">
-                                    {Array.from(files).map((file, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                {file && ( // <-- Show single file
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
                                             <span className="text-sm text-green-800">{file.name}</span>
                                             <CheckCircle className="w-4 h-4 text-green-600" />
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    </div>
+                                )}
 
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting || !files || files.length === 0}
-                                className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors"
-                            >
-                                {submitting ? 'Submitting...' : 'Submit Solution'}
-                            </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting || !file} // <-- Check single file
+                                    className="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors"
+                                >
+                                    {submitting ? 'Submitting...' : 'Submit Solution'}
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
     );
 };
 
-// --- Leaderboard Page ---
+// --- Leaderboard Page (FIXED) ---
 const LeaderboardPage = ({ api, cache }) => {
+    const { user } = useAuth(); // <-- Get user
+    const { selectedHackathon } = useHackathon();
     const [tasks, setTasks] = useState([]);
     const [selectedTask, setSelectedTask] = useState('');
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Fetch all tasks for the dropdown
+    // Fetch and filter tasks for the dropdown based on role
     useEffect(() => {
         if (!api) return;
-        const loadTasks = async () => {
-            try {
-                const tasksData = await api.getTasks();
-                setTasks(tasksData);
-                if (tasksData.length > 0) {
-                    setSelectedTask(tasksData[0].id); // Select first task by default
-                } else {
-                    setLoading(false);
-                }
-            } catch (error) {
-                console.error('Failed to load tasks:', error);
-                setLoading(false);
+
+        let taskSource;
+        if (user.role === 'PARTICIPANT') {
+            if (!selectedHackathon) {
+                setTasks([]);
+                return; // Wait for selection
             }
-        };
-        loadTasks();
-    }, [api]);
+            const allTasks = cache.getAllTasks();
+            const hackathonTaskIds = selectedHackathon.taskIds || [];
+            taskSource = allTasks.filter(task => hackathonTaskIds.includes(task.id));
+        } else {
+            // ADMIN/JUDGE
+            taskSource = cache.getAllTasks();
+        }
+
+        setTasks(taskSource);
+
+        if (taskSource.length > 0) {
+            setSelectedTask(taskSource[0].id); // Select first task by default
+        } else {
+            setSelectedTask('');
+            setLeaderboard([]);
+        }
+    }, [api, cache, selectedHackathon, user.role]);
 
     // Fetch leaderboard when selectedTask changes
     useEffect(() => {
-        if (!selectedTask || !api) return;
+        if (!selectedTask || !api) {
+            setLoading(false);
+            return;
+        }
 
         const loadLeaderboard = async () => {
             setLoading(true);
@@ -472,7 +628,7 @@ const LeaderboardPage = ({ api, cache }) => {
                     onChange={(e) => setSelectedTask(e.target.value)}
                     className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900" // <-- CSS FIX
                 >
-                    <option value="" disabled>Select a task</option>
+                    <option value="">Select a challenge...</option>
                     {tasks.map(task => (
                         <option key={task.id} value={task.id}>{task.name}</option>
                     ))}
@@ -490,12 +646,12 @@ const LeaderboardPage = ({ api, cache }) => {
                                 <th className="px-6 py-4 text-left">Rank</th>
                                 <th className="px-6 py-4 text-left">User</th>
                                 <th className="px-6 py-4 text-right">Score</th>
-                                <th className="px-6 py-4 text-right">Last Submission</th>
+                                <th className="px-6 py-4 text-right">Submission Time</th>
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                             {leaderboard.map((entry, index) => (
-                                <tr key={entry.id} className="hover:bg-gray-50">
+                                <tr key={entry.id || entry.userId} className="hover:bg-gray-50">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
                                             {index + 1 <= 3 ? (
@@ -509,13 +665,15 @@ const LeaderboardPage = ({ api, cache }) => {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 font-medium text-gray-900">{cache.getUserName(entry.user_id)}</td>
+                                    {/* --- FIELD FIXES --- */}
+                                    <td className="px-6 py-4 font-medium text-gray-900">{cache.getUserName(entry.userId)}</td>
                                     <td className="px-6 py-4 text-right">
                                             <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-semibold">
-                                                {entry.score}
+                                                {entry.bestScore}
                                             </span>
                                     </td>
-                                    <td className="px-6 py-4 text-right text-gray-500 text-sm">{formatTimestamp(entry.submissionTimestamp)}</td>
+                                    <td className="px-6 py-4 text-right text-gray-500 text-sm">{formatTimestamp(entry.bestScoreTimestamp)}</td>
+                                    {/* ------------------- */}
                                 </tr>
                             ))}
                             </tbody>
@@ -527,28 +685,30 @@ const LeaderboardPage = ({ api, cache }) => {
     );
 };
 
-// --- Submissions Page ---
+// --- Submissions Page (REWRITTEN) ---
 const SubmissionsPage = ({ api, cache }) => {
     const { user } = useAuth();
-    const [submissions, setSubmissions] = useState([]);
+    // Stores the Map<String, List<Solution>>
+    const [history, setHistory] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!user || !api) return;
 
-        const loadSubmissions = async () => {
+        const loadHistory = async () => {
             setLoading(true);
             try {
-                const data = await api.getSolutionsForUser(user.id);
-                setSubmissions(data);
+                // Use the new history endpoint
+                const data = await api.getSubmissionHistory(user.id);
+                setHistory(data);
             } catch (error) {
-                console.error('Failed to load submissions:', error);
-                alert('Failed to load submissions: ' + error.message);
+                console.error('Failed to load submission history:', error);
+                alert('Failed to load history: ' + error.message);
             } finally {
                 setLoading(false);
             }
         };
-        loadSubmissions();
+        loadHistory();
     }, [api, user]);
 
     const formatTimestamp = (isoString) => {
@@ -558,33 +718,41 @@ const SubmissionsPage = ({ api, cache }) => {
 
     if (loading) return <LoadingSpinner />;
 
+    const taskIds = history ? Object.keys(history) : [];
+
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">My Submissions</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">My Submission History</h1>
 
-            {submissions.length === 0 ? (
+            {(!history || taskIds.length === 0) ? (
                 <EmptyState icon={FileText} message="You have not made any submissions yet." />
             ) : (
-                <div className="space-y-4">
-                    {submissions.map(submission => (
-                        <div key={submission.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-lg text-gray-900">{cache.getTaskName(submission.task_id)}</h3>
-                                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                                        <span className="flex items-center">
-                                            <Clock className="w-4 h-4 mr-1" />
-                                            {formatTimestamp(submission.submissionTimestamp)}
-                                        </span>
+                <div className="space-y-8">
+                    {taskIds.map(taskId => (
+                        <div key={taskId} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                            <h2 className="text-xl font-bold text-gray-900 p-6 bg-gray-50 border-b">
+                                {cache.getTaskName(taskId)}
+                            </h2>
+                            <div className="divide-y divide-gray-200">
+                                {history[taskId].map(submission => (
+                                    <div key={submission.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
+                                        <div className="flex-1">
+                                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                                <span className="flex items-center">
+                                                    <Clock className="w-4 h-4 mr-1" />
+                                                    {formatTimestamp(submission.submissionTimestamp)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-indigo-600">{submission.score}</div>
+                                            <div className="flex items-center text-green-600 text-sm mt-1">
+                                                <CheckCircle className="w-4 h-4 mr-1" />
+                                                Evaluated
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-indigo-600">{submission.score}</div>
-                                    <div className="flex items-center text-green-600 text-sm mt-1">
-                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                        Evaluated
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     ))}
@@ -593,6 +761,7 @@ const SubmissionsPage = ({ api, cache }) => {
         </div>
     );
 };
+
 
 // --- Admin Page ---
 const AdminPage = ({ api, cache }) => {
@@ -615,10 +784,18 @@ const AdminPage = ({ api, cache }) => {
                 >
                     Manage Users
                 </button>
+                {/* NEW HACKATHON BUTTON */}
+                <button
+                    onClick={() => setView('hackathons')}
+                    className={`px-4 py-2 rounded-lg ${view === 'hackathons' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-900'}`}
+                >
+                    Manage Hackathons
+                </button>
             </div>
 
             {view === 'tasks' && <AdminTasksView api={api} cache={cache} />}
             {view === 'users' && <AdminUsersView api={api} />}
+            {view === 'hackathons' && <AdminHackathonsView api={api} cache={cache} />}
         </div>
     );
 };
@@ -957,7 +1134,7 @@ const AdminUsersView = ({ api }) => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
-    const [selectedUser, setSelectedUser] = useState(null); // <-- NEW
+    const [selectedUser, setSelectedUser] = useState(null);
 
     const loadUsers = async () => {
         setLoading(true);
@@ -1025,7 +1202,6 @@ const AdminUsersView = ({ api }) => {
                                 </td>
                                 <td className="px-6 py-4 text-sm text-gray-600">{user.team_name || '-'}</td>
                                 <td className="px-6 py-4 text-sm text-right space-x-2">
-                                    {/* --- NEW EDIT BUTTON --- */}
                                     <button
                                         onClick={() => setSelectedUser(user)}
                                         className="text-indigo-600 hover:text-indigo-800"
@@ -1033,7 +1209,6 @@ const AdminUsersView = ({ api }) => {
                                     >
                                         <Edit className="w-5 h-5" />
                                     </button>
-                                    {/* --------------------- */}
                                     <button
                                         onClick={() => handleDelete(user.id, user.username)}
                                         className="text-red-600 hover:text-red-800"
@@ -1050,7 +1225,6 @@ const AdminUsersView = ({ api }) => {
             )}
 
             {showCreateForm && <CreateUserModal api={api} onClose={() => setShowCreateForm(false)} onSuccess={loadUsers} />}
-            {/* --- NEW EDIT MODAL RENDER --- */}
             {selectedUser && <EditUserModal api={api} user={selectedUser} onClose={() => setSelectedUser(null)} onSuccess={loadUsers} />}
         </div>
     );
@@ -1168,7 +1342,6 @@ const CreateUserModal = ({ api, onClose, onSuccess }) => {
     );
 };
 
-// --- NEW COMPONENT ---
 const EditUserModal = ({ api, user, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         role: user.role,
@@ -1265,7 +1438,381 @@ const EditUserModal = ({ api, user, onClose, onSuccess }) => {
         </div>
     );
 };
-// --------------------
+
+// --- NEW COMPONENT: AdminHackathonsView ---
+const AdminHackathonsView = ({ api, cache }) => {
+    const [hackathons, setHackathons] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [selectedHackathon, setSelectedHackathon] = useState(null); // For editing
+
+    const loadHackathons = async () => {
+        setLoading(true);
+        try {
+            const data = await api.getHackathons();
+            setHackathons(data);
+            cache.refresh();
+        } catch (error) {
+            console.error('Failed to load hackathons:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if(api) loadHackathons();
+    }, [api]);
+
+    const handleDelete = async (hackId) => {
+        if (window.confirm("Are you sure you want to delete this hackathon?")) {
+            try {
+                await api.deleteHackathon(hackId);
+                alert('Hackathon deleted successfully');
+                loadHackathons();
+            } catch (error) {
+                alert('Failed to delete hackathon: ' + error.message);
+            }
+        }
+    };
+
+    return (
+        <div>
+            <button
+                onClick={() => setShowCreateForm(true)}
+                className="mb-6 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
+            >
+                <Plus className="w-5 h-5" />
+                <span>Create New Hackathon</span>
+            </button>
+
+            {showCreateForm && (
+                <CreateHackathonModal
+                    api={api}
+                    onClose={() => setShowCreateForm(false)}
+                    onSuccess={loadHackathons}
+                />
+            )}
+
+            {selectedHackathon && (
+                <EditHackathonModal
+                    api={api}
+                    hackathon={selectedHackathon}
+                    cache={cache}
+                    onClose={() => setSelectedHackathon(null)}
+                    onSuccess={loadHackathons}
+                />
+            )}
+
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Existing Hackathons</h3>
+            {loading ? <LoadingSpinner /> : (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tasks</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Users</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                        {hackathons.map(hack => (
+                            <tr key={hack.id}>
+                                <td className="px-6 py-4 text-sm text-gray-900">{hack.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{hack.taskIds?.length || 0}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{hack.userIds?.length || 0}</td>
+                                <td className="px-6 py-4 text-sm text-right space-x-2">
+                                    <button
+                                        onClick={() => setSelectedHackathon(hack)}
+                                        className="text-indigo-600 hover:text-indigo-800"
+                                        title="Edit Hackathon"
+                                    >
+                                        <Edit className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(hack.id)}
+                                        className="text-red-600 hover:text-red-800"
+                                        title="Delete Hackathon"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: CreateHackathonModal ---
+const CreateHackathonModal = ({ api, onClose, onSuccess }) => {
+    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await api.createHackathon(formData);
+            alert('Hackathon created successfully!');
+            onSuccess();
+            onClose();
+        } catch (error) {
+            alert('Failed to create hackathon: ' + error.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-xl">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Create New Hackathon</h2>
+                        <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Hackathon Name</label>
+                        <input
+                            type="text"
+                            placeholder="Hackathon Name"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea
+                            placeholder="Description"
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            rows={4}
+                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                        />
+                    </div>
+                </div>
+                <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl">
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:bg-gray-300"
+                    >
+                        {submitting ? "Creating..." : "Create Hackathon"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-gray-900" // <-- CSS FIX
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// --- NEW COMPONENT: EditHackathonModal ---
+const EditHackathonModal = ({ api, hackathon, cache, onClose, onSuccess }) => {
+    const [formData, setFormData] = useState({ id: hackathon.id, name: hackathon.name, description: hackathon.description });
+    const [submitting, setSubmitting] = useState(false);
+
+    // State for association management
+    const [tasks, setTasks] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [selectedTask, setSelectedTask] = useState('');
+    const [selectedUser, setSelectedUser] = useState('');
+
+    // Refreshable state for associated items
+    const [associatedTaskIds, setAssociatedTaskIds] = useState(hackathon.taskIds || []);
+    const [associatedUserIds, setAssociatedUserIds] = useState(hackathon.userIds || []);
+
+    // Load all tasks and users for the dropdowns
+    useEffect(() => {
+        setTasks(cache.getAllTasks());
+        setUsers(cache.getAllUsers());
+    }, [cache]);
+
+    const handleDetailsUpdate = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await api.updateHackathon(hackathon.id, formData);
+            alert('Hackathon details updated!');
+            onSuccess(); // Refresh the main list
+        } catch (error) {
+            alert('Failed to update hackathon: ' + error.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleAddTask = async () => {
+        if (!selectedTask || associatedTaskIds.includes(selectedTask)) return;
+        try {
+            const updatedHackathon = await api.addTaskToHackathon(hackathon.id, selectedTask);
+            setAssociatedTaskIds(updatedHackathon.taskIds);
+            setSelectedTask('');
+            onSuccess();
+        } catch (error) { alert('Failed to add task: ' + error.message); }
+    };
+
+    const handleRemoveTask = async (taskId) => {
+        try {
+            const updatedHackathon = await api.removeTaskFromHackathon(hackathon.id, taskId);
+            setAssociatedTaskIds(updatedHackathon.taskIds);
+            onSuccess();
+        } catch (error) { alert('Failed to remove task: ' + error.message); }
+    };
+
+    const handleAddUser = async () => {
+        if (!selectedUser || associatedUserIds.includes(selectedUser)) return;
+        try {
+            const updatedHackathon = await api.addUserToHackathon(hackathon.id, selectedUser);
+            setAssociatedUserIds(updatedHackathon.userIds);
+            setSelectedUser('');
+            onSuccess();
+        } catch (error) { alert('Failed to add user: ' + error.message); }
+    };
+
+    const handleRemoveUser = async (userId) => {
+        try {
+            const updatedHackathon = await api.removeUserFromHackathon(hackathon.id, userId);
+            setAssociatedUserIds(updatedHackathon.userIds);
+            onSuccess();
+        } catch (error) { alert('Failed to remove user: ' + error.message); }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-xl">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Edit Hackathon: {formData.name}</h2>
+                        <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="overflow-y-auto">
+                    {/* Details Form */}
+                    <form onSubmit={handleDetailsUpdate} className="p-6 space-y-4 border-b">
+                        <h3 className="text-lg font-semibold text-gray-900">Hackathon Details</h3>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Hackathon Name</label>
+                            <input
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <textarea
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                rows={3}
+                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:bg-gray-300"
+                        >
+                            {submitting ? "Saving..." : "Save Details"}
+                        </button>
+                    </form>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2">
+                        {/* Manage Tasks */}
+                        <div className="p-6 space-y-3 border-b md:border-b-0 md:border-r">
+                            <h3 className="text-lg font-semibold text-gray-900">Manage Tasks</h3>
+                            <div className="flex space-x-2">
+                                <select
+                                    value={selectedTask}
+                                    onChange={e => setSelectedTask(e.target.value)}
+                                    className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                                >
+                                    <option value="">Select a task to add...</option>
+                                    {tasks
+                                        .filter(task => !associatedTaskIds.includes(task.id))
+                                        .map(task => (
+                                            <option key={task.id} value={task.id}>{task.name}</option>
+                                        ))}
+                                </select>
+                                <button onClick={handleAddTask} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Add</button>
+                            </div>
+                            <div className="space-y-2 pt-2 max-h-48 overflow-y-auto">
+                                {associatedTaskIds.map(taskId => (
+                                    <div key={taskId} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                        <span className="text-sm text-gray-800">{cache.getTaskName(taskId)}</span>
+                                        <button onClick={() => handleRemoveTask(taskId)} className="text-red-500 hover:text-red-700"><XCircle className="w-5 h-5" /></button>
+                                    </div>
+                                ))}
+                                {associatedTaskIds.length === 0 && <p className="text-sm text-gray-500">No tasks associated.</p>}
+                            </div>
+                        </div>
+
+                        {/* Manage Users */}
+                        <div className="p-6 space-y-3">
+                            <h3 className="text-lg font-semibold text-gray-900">Manage Users</h3>
+                            <div className="flex space-x-2">
+                                <select
+                                    value={selectedUser}
+                                    onChange={e => setSelectedUser(e.target.value)}
+                                    className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 text-gray-900" // <-- CSS FIX
+                                >
+                                    <option value="">Select a user to add...</option>
+                                    {users
+                                        .filter(user => !associatedUserIds.includes(user.id))
+                                        .map(user => (
+                                            <option key={user.id} value={user.id}>{user.username}</option>
+                                        ))}
+                                </select>
+                                <button onClick={handleAddUser} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Add</button>
+                            </div>
+                            <div className="space-y-2 pt-2 max-h-48 overflow-y-auto">
+                                {associatedUserIds.map(userId => (
+                                    <div key={userId} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                        <span className="text-sm text-gray-800">{cache.getUserName(userId)}</span>
+                                        <button onClick={() => handleRemoveUser(userId)} className="text-red-500 hover:text-red-700"><XCircle className="w-5 h-5" /></button>
+                                    </div>
+                                ))}
+                                {associatedUserIds.length === 0 && <p className="text-sm text-gray-500">No users associated.</p>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Close Button */}
+                <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl sticky bottom-0 border-t">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-gray-900" // <-- CSS FIX
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- Judge Page ---
 const JudgePage = ({ api, cache }) => {
@@ -1278,6 +1825,7 @@ const JudgePage = ({ api, cache }) => {
         const loadSubmissions = async () => {
             setLoading(true);
             try {
+                // Uses new API path
                 const data = await api.getAllSolutions();
                 setSubmissions(data);
             } catch (error) {
@@ -1308,9 +1856,9 @@ const JudgePage = ({ api, cache }) => {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <h3 className="font-semibold text-lg text-gray-900">
-                                            {cache.getUserName(submission.user_id)}
+                                            {cache.getUserName(submission.userId)}
                                         </h3>
-                                        <p className="text-gray-600">{cache.getTaskName(submission.task_id)}</p>
+                                        <p className="text-gray-600">{cache.getTaskName(submission.taskId)}</p>
                                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                                             <span className="flex items-center">
                                                 <Clock className="w-4 h-4 mr-1" />
@@ -1347,8 +1895,7 @@ const JudgePage = ({ api, cache }) => {
 
 const ReviewModal = ({ submission, onClose, cache }) => {
     // Note: The backend does not currently support submitting a manual review.
-    // This modal is read-only, fulfilling the "manual review capabilities"
-    // by allowing a judge to see the submission details.
+    // This modal is read-only.
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1358,7 +1905,7 @@ const ReviewModal = ({ submission, onClose, cache }) => {
                         <div>
                             <h2 className="text-2xl font-bold mb-2">Review Submission</h2>
                             <p className="text-indigo-100">
-                                {cache.getUserName(submission.user_id)} - {cache.getTaskName(submission.task_id)}
+                                {cache.getUserName(submission.userId)} - {cache.getTaskName(submission.taskId)}
                             </p>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
@@ -1374,20 +1921,22 @@ const ReviewModal = ({ submission, onClose, cache }) => {
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-lg mb-2">Submitted Files</h3>
+                        <h3 className="font-semibold text-lg mb-2">Submitted File</h3>
                         <div className="space-y-2">
-                            {submission.files.map((file, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            {/* The Solution model only has one `file`, not `files` */}
+                            {submission.file ? (
+                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                                     <div className="flex items-center space-x-3">
                                         <FileText className="w-5 h-5 text-gray-500" />
                                         <div>
-                                            <div className="font-medium text-gray-900">{file.fileName}</div>
-                                            <div className="text-xs text-gray-500">{file.contentType}</div>
+                                            <div className="font-medium text-gray-900">{submission.file.fileName}</div>
+                                            <div className="text-xs text-gray-500">{submission.file.contentType}</div>
                                         </div>
                                     </div>
-                                    {/* Download is not directly supported here as it would require a new endpoint */}
                                 </div>
-                            ))}
+                            ) : (
+                                <p className="text-sm text-gray-500">No file data for this submission.</p>
+                            )}
                         </div>
                     </div>
 
@@ -1406,11 +1955,13 @@ const ReviewModal = ({ submission, onClose, cache }) => {
 };
 
 
-// --- Main App Component ---
+// --- Main App Component (UPDATED) ---
 const App = () => {
     const { user, api, loading, error, login } = useAuth();
+    // Get hackathon context for routing
+    const { selectedHackathon, loadingHackathons } = useHackathon();
 
-    if (loading) {
+    if (loading || loadingHackathons) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
                 <div className="text-center">
@@ -1440,7 +1991,20 @@ const App = () => {
         );
     }
 
-    // Pass the authenticated API client to the Navigation
+    // --- NEW PARTICIPANT ROUTING ---
+    // If the user is a participant AND no hackathon is selected,
+    // show the selector screen instead of the main app.
+    if (user.role === 'PARTICIPANT' && !selectedHackathon) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                {/* ADD THE MINIMAL HEADER WITH LOGOUT */}
+                <MinimalHeader />
+                <HackathonSelector />
+            </div>
+        );
+    }
+
+    // Otherwise, show the main app (for Admins, Judges, or Participants who have selected a hackathon)
     return (
         <div className="min-h-screen bg-gray-50">
             <Navigation api={api} />
@@ -1449,10 +2013,13 @@ const App = () => {
 };
 
 // --- Root Component with Provider ---
-export default function HackathonPlatform() {
+export default function HackPlatform() {
     return (
+        // Wrap the app in BOTH providers
         <AuthProvider>
-            <App />
+            <HackathonProvider>
+                <App />
+            </HackathonProvider>
         </AuthProvider>
     );
 }
