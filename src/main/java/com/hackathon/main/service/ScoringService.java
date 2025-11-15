@@ -44,7 +44,10 @@ public class ScoringService {
 
         String correctSolution = new String(bytes);
         String submittedSolution = new String(file.getBytes());
-
+        System.out.println("Correct src: " + correctSolution);
+        System.out.println("Submitted src: " + file.getContentType());
+        System.out.println("Correct type: " + taskFile.getContentType());
+        System.out.println("Submitted type: " + submittedSolution);
         List<Double> correct = fileToList(correctSolution, taskFile.getContentType());
         List<Double> submitted = fileToList(submittedSolution, file.getContentType());
 
