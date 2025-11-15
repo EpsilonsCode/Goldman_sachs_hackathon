@@ -72,6 +72,32 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
+    private TaskFile processSingleFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("Error: No file submitted!");
+        }
+        TaskFile tf = new TaskFile();
+        tf.setFileName(file.getOriginalFilename());
+        tf.setContentType(file.getContentType());
+        String base64 = Base64.getEncoder().encodeToString(file.getBytes());
+        tf.setDataBase64(base64);
+        return tf;
+    }
+
+    public Task addSolutionFileToTask(String taskId, MultipartFile file) throws IOException {
+        Task task = getTaskById(taskId);
+        TaskFile solutionFile = processSingleFile(file);
+        task.setSolutionFile(solutionFile);
+        return taskRepository.save(task);
+    }
+
+    public Task updateTaskDetails(String taskId, Task taskDetails) {
+        Task existingTask = getTaskById(taskId);
+        existingTask.setName(taskDetails.getName());
+        existingTask.setDescription(taskDetails.getDescription());
+        return taskRepository.save(existingTask);
+    }
+
     public Task removeFileFromTask(String taskId, int index) {
         Task task = getTaskById(taskId);
 
