@@ -10,6 +10,9 @@ services:
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/mydatabase
       SERVER_PORT: 8762
+      # Nowe zmienne (patrz Problem 2)
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/hackathon
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
     ports:
       - "8762:8762"
     networks:
@@ -39,6 +42,9 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/hackathon
+      EYCLOAK_SERVER_URL: http://keycloak:8080
+      KC_HTTP_ENABLED: 'true'  # <-- DODANO TĘ LINIĘ
     volumes:
       - ./keycloak/realms:/opt/keycloak/data/import
     ports:
