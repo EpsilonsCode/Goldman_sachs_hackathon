@@ -1,8 +1,10 @@
 package com.hackathon.main.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 public class ManualScoreDTO {
     private String userId;
     private String taskId;

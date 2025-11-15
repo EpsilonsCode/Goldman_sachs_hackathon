@@ -38,7 +38,6 @@ public class HackathonController {
         return ResponseEntity.ok(savedHackathon);
     }
 
-    //add tasks
     @PutMapping("/{hackId}/tasks/{taskId}")
     public ResponseEntity<Hackathon> addTaskToHackathon(
             @PathVariable String hackId,
@@ -48,7 +47,6 @@ public class HackathonController {
         return ResponseEntity.ok(updated);
     }
 
-    //add users
     @PutMapping("/{hackId}/users/{userId}")
     public ResponseEntity<Hackathon> addUserToHackathon(
             @PathVariable String hackId,
@@ -84,9 +82,6 @@ public class HackathonController {
         Hackathon saved = hackathonService.updateHackathon(hackId, updatedHackathon);
         return ResponseEntity.ok(saved);
     }
-
-
-
 }
 
 

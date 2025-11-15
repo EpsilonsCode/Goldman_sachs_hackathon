@@ -62,7 +62,7 @@ public class SolutionService {
             if (isNewScoreBetter || isTieAndFaster) {
                 existingBest.setBestScore(newScore);
                 existingBest.setBestScoreTimestamp(newTimestamp);
-                leaderboardRepository.save(existingBest); // Zaktualizuj wpis
+                leaderboardRepository.save(existingBest);
             }
         }
     }

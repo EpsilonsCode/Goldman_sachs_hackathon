@@ -8,10 +8,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
-/**
- * MODEL: Przechowuje TYLKO najlepszy wynik.
- * Reprezentuje jeden wiersz w tabeli wyników.
- */
 @Document(collection = "leaderboard")
 @Data
 @NoArgsConstructor
@@ -23,9 +19,8 @@ public class LeaderboardEntry {
     private String taskId;
 
     private int bestScore;
-    private Instant bestScoreTimestamp; // Timestamp TEJ submisji, która dała ten wynik
+    private Instant bestScoreTimestamp;
 
-    // Konstruktor używany w SolutionService
     public LeaderboardEntry(String userId, String taskId, int bestScore, Instant bestScoreTimestamp) {
         this.userId = userId;
         this.taskId = taskId;
