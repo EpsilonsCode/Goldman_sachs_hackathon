@@ -1,19 +1,69 @@
 package com.hackathon.main.service;
 
 import com.hackathon.main.model.Solution;
+import com.hackathon.main.model.TaskFile;
 import com.hackathon.main.repository.SolutionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Collections;
-import java.util.List;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class SolutionService {
     private final SolutionRepository solutionRepository;
-    //TODO: submitSolution()
+
+    public Solution submitSolution(String userId, String taskId, List<MultipartFile> files) throws IOException {
+        if (files == null || files.isEmpty() || files.get(0).isEmpty()) {
+            throw new RuntimeException("Error: No file submitted!");
+        }
+
+        List<TaskFile> solutionFiles = new ArrayList<>();
+        for (MultipartFile file : files) {
+            if (file.isEmpty()) continue;
+
+            TaskFile tf = new TaskFile();
+            tf.setFileName(file.getOriginalFilename());
+            tf.setContentType(file.getContentType());
+
+            String base64 = Base64.getEncoder()
+                    .encodeToString(file.getBytes());
+            tf.setDataBase64(base64);
+
+            solutionFiles.add(tf);
+        }
+        //TODO: scoring system
+        int newScore = (int) (Math.random() * 100);
+        Instant newTimestamp = Instant.now();
+
+        Optional<Solution> existingSolutionOpt = solutionRepository.findByUserIdAndTaskId(userId, taskId);
+
+        if (existingSolutionOpt.isEmpty()) {
+            Solution solutionToSave = new Solution();
+            solutionToSave.setUser_id(userId);
+            solutionToSave.setTask_id(taskId);
+            solutionToSave.setScore(newScore);
+            solutionToSave.setSubmissionTimestamp(newTimestamp);
+            solutionToSave.setFiles(solutionFiles);
+
+            return solutionRepository.save(solutionToSave);
+        } else {
+            Solution existingSolution = existingSolutionOpt.get();
+
+            if (newScore > existingSolution.getScore()) {
+                existingSolution.setScore(newScore);
+                existingSolution.setSubmissionTimestamp(newTimestamp);
+                existingSolution.setFiles(solutionFiles);
+
+                return solutionRepository.save(existingSolution);
+            }
+            return existingSolution;
+        }
+    }
 
     public List<Solution> getLeaderboardForTask(String taskId) {
         Sort sort = Sort.by(

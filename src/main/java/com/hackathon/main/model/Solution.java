@@ -24,5 +24,5 @@ public class Solution {
     private int score;
     private Instant submissionTimestamp;
 
-    private List<TaskFile> file = new ArrayList<>();
+    private List<TaskFile> files = new ArrayList<>();
 }
