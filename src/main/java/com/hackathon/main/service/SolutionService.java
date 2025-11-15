@@ -40,7 +40,7 @@ public class SolutionService {
         int newScore = (int) (Math.random() * 100);
         Instant newTimestamp = Instant.now();
 
-        Optional<Solution> existingSolutionOpt = solutionRepository.findByUserIdAndTaskId(userId, taskId);
+        Optional<Solution> existingSolutionOpt = solutionRepository.findByUser_idAndTask_id(userId, taskId);
 
         if (existingSolutionOpt.isEmpty()) {
             Solution solutionToSave = new Solution();
@@ -70,7 +70,7 @@ public class SolutionService {
                 Sort.Order.desc("score"),
                 Sort.Order.asc("submissionTimestamp")
         );
-        return solutionRepository.findByTaskId(taskId, sort);
+        return solutionRepository.findByTask_id(taskId, sort);
     }
 
     public void deleteSolution(String id) {
@@ -84,10 +84,10 @@ public class SolutionService {
     }
 
     public List<Solution> getSolutionsForUser(String userId) {
-        return solutionRepository.findByUserId(userId);
+        return solutionRepository.findByUser_id(userId);
     }
     public List<Solution> getSolutionsForTask(String taskId) {
-        return solutionRepository.findByTaskId(taskId);
+        return solutionRepository.findByTask_id(taskId);
     }
 
 
