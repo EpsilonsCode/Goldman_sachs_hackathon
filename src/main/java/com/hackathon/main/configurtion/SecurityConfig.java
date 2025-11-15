@@ -23,9 +23,7 @@ public class SecurityConfig {
                 new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
         oidcLogoutSuccessHandler.setPostLogoutRedirectUri("{baseUrl}/");
 
-        http
-                // Protect all requests
-                .authorizeHttpRequests(auth -> auth
+        http.cors(Customizer.withDefaults()).authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
                 )
                 // OAuth2 login for browser

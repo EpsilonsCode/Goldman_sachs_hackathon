@@ -1,16 +1,20 @@
-import logo from './logo.svg';
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import './App.css';
+import Keycloak from 'keycloak-js';
+import { ReactKeycloakProvider } from "@react-keycloak/web";
+import { Profile } from './Profile';
 
 function App() {
+
+    const kc = new Keycloak({
+      url: 'http://localhost:8180',
+      realm: 'hackathon',
+      clientId: 'hackathon-app',
+    });
+
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<h1>Home3</h1>} />
-        <Route path="/site" element={<h1>site</h1>} />
-        <Route path="/other" element={<h1>other</h1>} />
-      </Routes>
-    </BrowserRouter>
+    <ReactKeycloakProvider authClient={kc}>
+      <Profile />
+    </ReactKeycloakProvider>
   );
 }
 
