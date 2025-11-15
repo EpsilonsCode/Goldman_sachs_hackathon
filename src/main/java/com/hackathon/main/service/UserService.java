@@ -59,27 +59,21 @@ public class UserService {
         return userRepository.save(dbUser);
     }
 
-    // --- NEW METHOD ---
     public User updateUser(String id, UpdateUserDto userDto) {
-        // 1. Find user in our DB
         User dbUser = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
 
-        // 2. Update local DB fields
         dbUser.setRole(userDto.getRole());
         dbUser.setTeam_name(userDto.getTeam_name());
         userRepository.save(dbUser);
 
-        // 3. Get the Keycloak User Resource
         var userResource = keycloakAdmin.realm("hackathon").users().get(dbUser.getKeycloakId());
         if (userResource == null) {
             throw new RuntimeException("Keycloak user not found for ID: " + dbUser.getKeycloakId());
         }
 
-        // 4. Get all available roles in the realm
         List<RoleRepresentation> allRealmRoles = keycloakAdmin.realm("hackathon").roles().list();
 
-        // 5. Find the RoleRepresentation for the new role
         String newRoleName = userDto.getRole().getKeycloakRoleName();
         RoleRepresentation newKeycloakRole = allRealmRoles.stream()
                 .filter(r -> r.getName().equals(newRoleName))
@@ -88,7 +82,6 @@ public class UserService {
 
         List<RoleRepresentation> rolesToAdd = Collections.singletonList(newKeycloakRole);
 
-        // 6. Find all other *managed* roles to remove
         List<String> managedRoleNames = List.of(
                 Role.ADMIN.getKeycloakRoleName(),
                 Role.JUDGE.getKeycloakRoleName(),
@@ -102,7 +95,6 @@ public class UserService {
                 .filter(r -> !r.getName().equals(newRoleName))     // And it's not the new role
                 .toList();
 
-        // 7. Perform the update
         if (!rolesToRemove.isEmpty()) {
             userResource.roles().realmLevel().remove(rolesToRemove);
         }
@@ -110,13 +102,11 @@ public class UserService {
 
         return dbUser;
     }
-    // --------------------
 
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // This is the version you requested, without the role-sync logic.
     public User getCurrentLoggedInUser(Jwt jwt) {
         String keycloakId = jwt.getClaimAsString("preferred_username");
         return userRepository.findByUsername(keycloakId)
