@@ -37,38 +37,37 @@ public class HackathonService {
         hackathonRepository.deleteById(hackId);
     }
 
-    // --- FIX IS HERE ---
     public Hackathon addTaskToHackathon(String hackId, String taskId) {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
-        if (hackathon.getTasks() == null) { // <-- FIXED: Renamed to getTasks()
+        if (hackathon.getTasks() == null) {
             hackathon.setTasks(new ArrayList<>());
         }
 
-        if (!hackathon.getTasks().contains(taskId)) { // <-- FIXED: Renamed to getTasks()
-            hackathon.getTasks().add(taskId); // <-- FIXED: Renamed to getTasks()
-            return hackathonRepository.save(hackathon); // <-- This save is ESSENTIAL
+        if (!hackathon.getTasks().contains(taskId)) {
+            hackathon.getTasks().add(taskId);
+            return hackathonRepository.save(hackathon);
         }
         return hackathon;
     }
 
-    // --- AND FIX IS HERE ---
+
     public Hackathon addUserToHackathon(String hackId, String userId) {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (hackathon.getUsers() == null) { // <-- FIXED: Renamed to getUsers()
+        if (hackathon.getUsers() == null) {
             hackathon.setUsers(new ArrayList<>());
         }
 
-        if (!hackathon.getUsers().contains(userId)) { // <-- FIXED: Renamed to getUsers()
-            hackathon.getUsers().add(userId); // <-- FIXED: Renamed to getUsers()
-            return hackathonRepository.save(hackathon); // <-- This save is ESSENTIAL
+        if (!hackathon.getUsers().contains(userId)) {
+            hackathon.getUsers().add(userId);
+            return hackathonRepository.save(hackathon);
         }
         return hackathon;
     }
@@ -77,8 +76,8 @@ public class HackathonService {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        if (hackathon.getTasks() != null) { // <-- FIXED: Renamed to getTasks()
-            hackathon.getTasks().remove(taskId); // <-- FIXED: Renamed to getTasks()
+        if (hackathon.getTasks() != null) {
+            hackathon.getTasks().remove(taskId);
             return hackathonRepository.save(hackathon);
         }
         return hackathon;
@@ -88,8 +87,8 @@ public class HackathonService {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        if (hackathon.getUsers() != null) { // <-- FIXED: Renamed to getUsers()
-            hackathon.getUsers().remove(userId); // <-- FIXED: Renamed to getUsers()
+        if (hackathon.getUsers() != null) {
+            hackathon.getUsers().remove(userId);
             return hackathonRepository.save(hackathon);
         }
         return hackathon;

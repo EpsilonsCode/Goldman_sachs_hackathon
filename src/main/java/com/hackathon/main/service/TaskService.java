@@ -65,7 +65,6 @@ public class TaskService {
                         .encodeToString(file.getBytes());
                 tf.setDataBase64(base64);
 
-                // dopisujemy do istniejącej listy
                 task.getFiles().add(tf);
             }
         }

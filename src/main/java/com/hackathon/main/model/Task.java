@@ -19,5 +19,5 @@ public class Task {
     private String description;
 
     private List<TaskFile> files = new ArrayList<>();
-
+    private TaskFile taskFile;
 }
