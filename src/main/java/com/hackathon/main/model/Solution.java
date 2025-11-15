@@ -3,13 +3,10 @@ package com.hackathon.main.model;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 
 @Document(collection = "solutions")
 @Getter
@@ -18,11 +15,11 @@ public class Solution {
     @Id
     private String id;
     @NotNull
-    private String user_id;
+    private String userId;
     @NotNull
-    private String task_id;
+    private String taskId;
     private int score;
     private Instant submissionTimestamp;
 
-    private List<TaskFile> files = new ArrayList<>();
+    private TaskFile file;
 }
