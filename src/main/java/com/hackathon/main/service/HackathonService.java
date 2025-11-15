@@ -30,7 +30,6 @@ public class HackathonService {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        // no duplicates
         if (!hackathon.getTasks().contains(taskId)) {
             hackathon.getTasks().add(taskId);
         }
@@ -42,7 +41,6 @@ public class HackathonService {
         Hackathon hackathon = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        // no duplicates
         if (!hackathon.getUsers().contains(userId)) {
             hackathon.getUsers().add(userId);
         }
@@ -78,7 +76,6 @@ public class HackathonService {
         Hackathon existing = hackathonRepository.findById(hackId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        // updating only basic data
         if (updatedData.getName() != null) {
             existing.setName(updatedData.getName());
         }
@@ -91,12 +88,8 @@ public class HackathonService {
             existing.setDate(updatedData.getDate());
         }
 
-        // not changing users and tasks
         return hackathonRepository.save(existing);
     }
-
-
-
 
     public List<Hackathon> getAllHackathons() { return hackathonRepository.findAll();}
 }

@@ -31,19 +31,16 @@ public class UserController {
         return ResponseEntity.ok(savedUser);
     }
 
-    // --- NEW ENDPOINT ---
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable String id, @RequestBody UpdateUserDto userDto) {
         try {
             User updatedUser = userService.updateUser(id, userDto);
             return ResponseEntity.ok(updatedUser);
         } catch (RuntimeException e) {
-            // Log the error
             e.printStackTrace();
             return ResponseEntity.notFound().build();
         }
     }
-    // --------------------
 
     @GetMapping()
     public List<User> getAllUsers() {
@@ -99,10 +96,8 @@ public class UserController {
     }
     @GetMapping("/{id}/history")
     public ResponseEntity<Map<String, List<Solution>>> getSubmissionHistory(@PathVariable String id) {
-        // Sprawdzamy, czy user istnieje (getUserById rzuci wyjątek, jeśli nie)
         userService.getUserById(id);
 
-        // Pobieramy pogrupowaną historię
         Map<String, List<Solution>> history = solutionService.getGroupedSolutionsForUser(id);
         return ResponseEntity.ok(history);
     }

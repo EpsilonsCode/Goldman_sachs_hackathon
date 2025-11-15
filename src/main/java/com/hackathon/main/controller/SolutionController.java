@@ -1,7 +1,7 @@
 package com.hackathon.main.controller;
 
 import com.hackathon.main.dto.ManualScoreDTO;
-import com.hackathon.main.model.LeaderboardEntry; // ZMIANA
+import com.hackathon.main.model.LeaderboardEntry;
 import com.hackathon.main.model.Solution;
 import com.hackathon.main.service.SolutionService;
 import lombok.RequiredArgsConstructor;
@@ -27,14 +27,12 @@ public class SolutionController {
             @RequestPart("file") MultipartFile file) {
 
         try {
-            // Serwis oceni plik, zapisze log i zaktualizuje leaderboard
             Solution newSolutionLog = solutionService.submitSolution(userId, taskId, file);
             return ResponseEntity.status(HttpStatus.CREATED).body(newSolutionLog);
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (RuntimeException e) {
-            // Dodana obsługa błędu, np. "No file submitted!"
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
     }

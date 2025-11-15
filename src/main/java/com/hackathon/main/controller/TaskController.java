@@ -83,7 +83,6 @@ public class TaskController {
                 .body(fileBytes);
     }
 
-    //adding file to task
     @PutMapping(
             value = "/{taskId}/files",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -97,7 +96,6 @@ public class TaskController {
         return ResponseEntity.ok(updated);
     }
 
-    //removing file from task
     @PutMapping("/{taskId}/files/{index}/remove")
     public ResponseEntity<Task> removeFileFromTask(
             @PathVariable String taskId,
