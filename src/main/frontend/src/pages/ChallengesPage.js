@@ -148,16 +148,17 @@ const TaskDetailModal = ({ task, onClose, api }) => {
                                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-500 transition-colors">
                                     <input
                                         type="file"
-                                        // multiple // <-- Removed multiple
                                         onChange={handleFileChange}
                                         className="hidden"
                                         id="file-upload"
-                                        accept=".csv,.json,.py,.ipynb,.zip"
+                                        // --- MODIFICATION ---
+                                        // The "accept" attribute has been removed to allow all file types.
+                                        // --- END MODIFICATION ---
                                     />
                                     <label htmlFor="file-upload" className="cursor-pointer">
                                         <Upload className="w-12 h-12 mx-auto text-gray-400 mb-3" />
                                         <p className="text-gray-600 mb-1">Click to upload a file</p>
-                                        <p className="text-sm text-gray-500">CSV, JSON, Python, ZIP, etc.</p>
+                                        <p className="text-sm text-gray-500">All file types are allowed</p>
                                     </label>
                                 </div>
 

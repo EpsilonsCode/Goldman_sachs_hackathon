@@ -1,16 +1,41 @@
 // src/pages/JudgePage.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { EmptyState } from "../components/EmptyState";
-import { CheckCircle, Clock, FileText, X } from 'lucide-react';
+import { CheckCircle, Clock, FileText, X, Save } from 'lucide-react';
 
-const ReviewModal = ({ submission, onClose, cache }) => {
-    // Note: The backend does not currently support submitting a manual review.
-    // This modal is read-only.
+const ReviewModal = ({ submission, onClose, cache, api, onSuccess }) => {
+    // State for the new score
+    const [newScore, setNewScore] = useState(submission.score);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            // --- MODIFIED DTO ---
+            const scoreDto = {
+                solutionId: submission.id, // <-- THIS IS THE FIX
+                userId: submission.userId,
+                taskId: submission.taskId,
+                newScore: parseInt(newScore, 10)
+            };
+            // --- END MODIFICATION ---
+
+            await api.manualUpdateScore(scoreDto);
+            alert('Score updated successfully!');
+            onSuccess(); // Refresh the submissions list
+            onClose();   // Close the modal
+        } catch (error) {
+            alert('Failed to update score: ' + error.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-t-xl">
                     <div className="flex justify-between items-start">
                         <div>
@@ -19,7 +44,7 @@ const ReviewModal = ({ submission, onClose, cache }) => {
                                 {cache.getUserName(submission.userId)} - {cache.getTaskName(submission.taskId)}
                             </p>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
+                        <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg">
                             <X className="w-6 h-6" />
                         </button>
                     </div>
@@ -27,8 +52,15 @@ const ReviewModal = ({ submission, onClose, cache }) => {
 
                 <div className="p-6 space-y-6">
                     <div>
-                        <h3 className="font-semibold text-lg mb-2">Automated Score</h3>
-                        <div className="text-3xl font-bold text-indigo-600">{submission.score}</div>
+                        <label htmlFor="manual-score" className="font-semibold text-lg mb-2 block">Manual Score</label>
+                        <input
+                            id="manual-score"
+                            type="number"
+                            value={newScore}
+                            onChange={(e) => setNewScore(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent text-gray-900 text-2xl font-bold"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">Automated Score was: {submission.score}</p>
                     </div>
 
                     <div>
@@ -51,16 +83,25 @@ const ReviewModal = ({ submission, onClose, cache }) => {
                         </div>
                     </div>
 
-                    <div className="flex space-x-3">
+                    <div className="flex space-x-3 pt-4 border-t">
                         <button
+                            type="button"
                             onClick={onClose}
                             className="flex-1 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-gray-900"
                         >
-                            Close
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="flex-1 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium disabled:bg-gray-400 flex items-center justify-center space-x-2"
+                        >
+                            <Save className="w-5 h-5" />
+                            <span>{submitting ? "Saving..." : "Save New Score"}</span>
                         </button>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     );
 };
@@ -71,22 +112,26 @@ export const JudgePage = ({ api, cache }) => {
     const [loading, setLoading] = useState(true);
     const [selectedSubmission, setSelectedSubmission] = useState(null);
 
-    useEffect(() => {
+    // --- Refactored loadSubmissions ---
+    const loadSubmissions = useCallback(async () => {
         if (!api) return;
-        const loadSubmissions = async () => {
-            setLoading(true);
-            try {
-                // Uses new API path
-                const data = await api.getAllSolutions();
-                setSubmissions(data);
-            } catch (error) {
-                console.error("Failed to load submissions:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        setLoading(true);
+        try {
+            // Uses new API path
+            const data = await api.getAllSolutions();
+            // Sort by most recent first
+            data.sort((a, b) => new Date(b.submissionTimestamp) - new Date(a.submissionTimestamp));
+            setSubmissions(data);
+        } catch (error) {
+            console.error("Failed to load submissions:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [api]); // Dependency array includes api
+
+    useEffect(() => {
         loadSubmissions();
-    }, [api]);
+    }, [loadSubmissions]); // useEffect now depends on the stable loadSubmissions function
 
     const formatTimestamp = (isoString) => new Date(isoString).toLocaleString();
 
@@ -138,6 +183,8 @@ export const JudgePage = ({ api, cache }) => {
                     submission={selectedSubmission}
                     onClose={() => setSelectedSubmission(null)}
                     cache={cache}
+                    api={api} // <-- Pass api
+                    onSuccess={loadSubmissions} // <-- Pass refresh function
                 />
             )}
         </div>

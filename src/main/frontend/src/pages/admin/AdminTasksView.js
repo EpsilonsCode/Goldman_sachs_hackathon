@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import {
-    Plus, Edit, Trash2, X, XCircle
+    Plus, Edit, Trash2, X, XCircle, CheckCircle
 } from 'lucide-react';
 
 const CreateTaskModal = ({ api, onClose, onSuccess }) => {
@@ -92,27 +92,34 @@ const CreateTaskModal = ({ api, onClose, onSuccess }) => {
 };
 
 const EditTaskModal = ({ api, task, onClose, onSuccess }) => {
-    const [formData, setFormData] = useState({ id: task.id, name: task.name, description: task.description, files: task.files || [] });
+    const [formData, setFormData] = useState({ id: task.id, name: task.name, description: task.description, files: task.files || [], solutionFile: task.solutionFile || null });
     const [newFiles, setNewFiles] = useState(null);
+    const [solutionFile, setSolutionFile] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
+    // --- MODIFIED HANDLER ---
     const handleDetailsUpdate = async (e) => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            // 1. Update text details
-            const taskDetails = { id: formData.id, name: formData.name, description: formData.description, files: formData.files };
-            const updatedTask = await api.updateTaskDetails(taskDetails);
+            // 1. Update text details (name and description only)
+            const taskDetails = { name: formData.name, description: formData.description };
+            let updatedTask = await api.updateTaskDetails(task.id, taskDetails);
 
-            // 2. Add new files if any
+            // 2. Add new DATASET files if any
             if (newFiles && newFiles.length > 0) {
-                const updatedTaskWithFiles = await api.addFilesToTask(task.id, newFiles);
-                setFormData(updatedTaskWithFiles); // Update local state with new file list
-            } else {
-                setFormData(updatedTask);
+                updatedTask = await api.addFilesToTask(task.id, newFiles);
             }
 
+            // 3. Add new SOLUTION file if any
+            if (solutionFile) {
+                updatedTask = await api.addSolutionFileToTask(task.id, solutionFile);
+            }
+
+            // Update local state with the final returned task object
+            setFormData(updatedTask);
             setNewFiles(null); // Clear file input
+            setSolutionFile(null); // Clear solution file input
             alert('Task updated successfully!');
             onSuccess(); // Refresh the main list
         } catch (error) {
@@ -121,6 +128,7 @@ const EditTaskModal = ({ api, task, onClose, onSuccess }) => {
             setSubmitting(false);
         }
     };
+    // --- END MODIFICATION ---
 
     const handleRemoveFile = async (fileIndex) => {
         if (window.confirm(`Are you sure you want to remove "${formData.files[fileIndex].fileName}"?`)) {
@@ -171,9 +179,9 @@ const EditTaskModal = ({ api, task, onClose, onSuccess }) => {
                             />
                         </div>
 
-                        {/* --- File Management --- */}
+                        {/* --- DATASET File Management --- */}
                         <div>
-                            <h3 className="text-lg font-semibold mb-3">Manage Files</h3>
+                            <h3 className="text-lg font-semibold mb-3">Manage Dataset Files</h3>
                             {/* Existing Files */}
                             <div className="space-y-2 mb-4">
                                 {formData.files.length > 0 ? formData.files.map((file, idx) => (
@@ -189,13 +197,13 @@ const EditTaskModal = ({ api, task, onClose, onSuccess }) => {
                                         </button>
                                     </div>
                                 )) : (
-                                    <p className="text-sm text-gray-500">No files associated with this task.</p>
+                                    <p className="text-sm text-gray-500">No dataset files associated.</p>
                                 )}
                             </div>
 
                             {/* Add New Files */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Add New Files</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Add New Dataset Files</label>
                                 <input
                                     type="file"
                                     multiple
@@ -204,9 +212,44 @@ const EditTaskModal = ({ api, task, onClose, onSuccess }) => {
                                 />
                             </div>
                         </div>
+
+                        {/* --- Solution File --- */}
+                        <div className="border-t pt-4">
+                            <h3 className="text-lg font-semibold mb-3">Manage Solution File</h3>
+                            <p className="text-sm text-gray-600 mb-2">Upload the correct solution file used for scoring.</p>
+
+                            {/* Show existing solution file */}
+                            {formData.solutionFile && !solutionFile && (
+                                <div className="flex items-center justify-between p-2 bg-green-50 rounded border border-green-200">
+                                    <div className="flex items-center space-x-2">
+                                        <CheckCircle className="w-5 h-5 text-green-600" />
+                                        <span className="text-sm text-green-800 truncate">{formData.solutionFile.fileName}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Show newly selected solution file */}
+                            {solutionFile && (
+                                <div className="flex items-center justify-between p-2 bg-blue-50 rounded border border-blue-200">
+                                    <span className="text-sm text-blue-800 truncate">New: {solutionFile.name}</span>
+                                    D</div>
+                            )}
+
+                            <div className="mt-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {formData.solutionFile ? "Upload New Solution" : "Upload Solution"}
+                                </label>
+                                <input
+                                    type="file"
+                                    onChange={(e) => setSolutionFile(e.target.files[0])}
+                                    className="w-full text-gray-900"
+                                />
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl sticky bottom-0">
+                    <div className="flex space-x-3 p-6 bg-gray-50 rounded-b-xl sticky bottom-0 border-t">
                         <button
                             type="submit"
                             disabled={submitting}
@@ -300,7 +343,8 @@ export const AdminTasksView = ({ api, cache }) => {
                         <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Files</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dataset Files</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Solution File</th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                         </thead>
@@ -309,6 +353,18 @@ export const AdminTasksView = ({ api, cache }) => {
                             <tr key={task.id}>
                                 <td className="px-6 py-4 text-sm text-gray-900">{task.name}</td>
                                 <td className="px-6 py-4 text-sm text-gray-600">{task.files?.length || 0}</td>
+                                {/* --- NEW COLUMN --- */}
+                                <td className="px-6 py-4 text-sm text-gray-600">
+                                    {task.solutionFile ? (
+                                        <span className="flex items-center text-green-600">
+                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                            Uploaded
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400">Missing</span>
+                                    )}
+                                </td>
+                                {/* --- END NEW COLUMN --- */}
                                 <td className="px-6 py-4 text-sm text-right space-x-2">
                                     <button
                                         onClick={() => setSelectedTask(task)}
