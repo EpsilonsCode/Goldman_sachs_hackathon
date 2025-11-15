@@ -73,11 +73,9 @@ public class SolutionController {
     @PutMapping("/judge/score")
     public ResponseEntity<LeaderboardEntry> manualScoreOverride(@RequestBody ManualScoreDTO scoreDTO) {
         try {
-            LeaderboardEntry updatedEntry = solutionService.manualUpdateScore(
-                    scoreDTO.getUserId(),
-                    scoreDTO.getTaskId(),
-                    scoreDTO.getNewScore()
-            );
+            // --- MODIFIED LINE ---
+            LeaderboardEntry updatedEntry = solutionService.manualUpdateScore(scoreDTO);
+            // --- END MODIFICATION ---
             return ResponseEntity.ok(updatedEntry);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

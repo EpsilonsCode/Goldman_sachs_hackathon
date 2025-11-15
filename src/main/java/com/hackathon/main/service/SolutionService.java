@@ -1,5 +1,6 @@
 package com.hackathon.main.service;
 
+import com.hackathon.main.dto.ManualScoreDTO; // <-- IMPORT ADDED
 import com.hackathon.main.model.LeaderboardEntry;
 import com.hackathon.main.model.Solution;
 import com.hackathon.main.model.TaskFile;
@@ -27,7 +28,7 @@ public class SolutionService {
     @Transactional
     public Solution submitSolution(String userId, String taskId, MultipartFile file) throws IOException {
 
-        TaskFile solutionFile = processFile(file);
+        TaskFile taskFile = processFile(file);
 
         int newScore = scoringService.calculateScore(taskId, file);
         Instant newTimestamp = Instant.now();
@@ -37,7 +38,7 @@ public class SolutionService {
         newLogEntry.setTaskId(taskId);
         newLogEntry.setScore(newScore);
         newLogEntry.setSubmissionTimestamp(newTimestamp);
-        newLogEntry.setFile(solutionFile);
+        newLogEntry.setFile(taskFile);
         solutionRepository.save(newLogEntry);
 
         updateLeaderboard(userId, taskId, newScore, newTimestamp);
@@ -68,22 +69,30 @@ public class SolutionService {
     }
 
     @Transactional
-    public LeaderboardEntry manualUpdateScore(String userId, String taskId, int newScore) {
+    // --- MODIFIED METHOD ---
+    public LeaderboardEntry manualUpdateScore(ManualScoreDTO scoreDTO) {
 
-        Optional<LeaderboardEntry> entryOpt = leaderboardRepository.findByUserIdAndTaskId(userId, taskId);
+        // 1. Find and update the specific Solution object
+        Solution solution = solutionRepository.findById(scoreDTO.getSolutionId())
+                .orElseThrow(() -> new RuntimeException("Solution not found with id: " + scoreDTO.getSolutionId()));
 
-        Instant now = Instant.now();
+        solution.setScore(scoreDTO.getNewScore());
+        solutionRepository.save(solution);
 
-        if (entryOpt.isEmpty()) {
-            LeaderboardEntry newEntry = new LeaderboardEntry(userId, taskId, newScore, now);
-            return leaderboardRepository.save(newEntry);
-        } else {
-            LeaderboardEntry existingEntry = entryOpt.get();
-            existingEntry.setBestScore(newScore);
-            existingEntry.setBestScoreTimestamp(now);
-            return leaderboardRepository.save(existingEntry);
-        }
+        // 2. Call the existing leaderboard logic to update the best score if needed
+        //    We use the solution's original timestamp for fair tie-breaking
+        updateLeaderboard(
+                scoreDTO.getUserId(),
+                scoreDTO.getTaskId(),
+                scoreDTO.getNewScore(),
+                solution.getSubmissionTimestamp()
+        );
+
+        // 3. Return the updated leaderboard entry
+        return leaderboardRepository.findByUserIdAndTaskId(scoreDTO.getUserId(), scoreDTO.getTaskId())
+                .orElseThrow(() -> new RuntimeException("Leaderboard entry not found after update."));
     }
+    // --- END MODIFICATION ---
 
     public List<LeaderboardEntry> getLeaderboardForTask(String taskId) {
         Sort sort = Sort.by(
