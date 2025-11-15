@@ -116,18 +116,15 @@ export const apiFactory = (token, login) => {
                 body: formData
             });
         },
-        updateTaskDetails: function(task) {
-            // TaskController POST handles both create and update
-            const formData = new FormData();
-            formData.append("task", new Blob([JSON.stringify(task)], {
-                type: "application/json"
-            }));
-
-            return fetchWithAuthFormData("/api/tasks", {
-                method: "POST",
-                body: formData
+        // --- MODIFIED FUNCTION ---
+        updateTaskDetails: function(taskId, taskDetails) {
+            // Calls the new PUT endpoint with only text details
+            return fetchWithAuth(`/api/tasks/${taskId}`, {
+                method: "PUT",
+                body: JSON.stringify(taskDetails) // Sends {name, description}
             });
         },
+        // --- END MODIFICATION ---
         addFilesToTask: function(taskId, files) {
             const formData = new FormData();
             Array.from(files).forEach(file => {
@@ -135,6 +132,15 @@ export const apiFactory = (token, login) => {
             });
 
             return fetchWithAuthFormData(`/api/tasks/${taskId}/files`, {
+                method: "PUT",
+                body: formData
+            });
+        },
+        addSolutionFileToTask: function(taskId, file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            return fetchWithAuthFormData(`/api/tasks/${taskId}/solution`, {
                 method: "PUT",
                 body: formData
             });
@@ -185,6 +191,12 @@ export const apiFactory = (token, login) => {
         deleteSolution: function(solutionId) {
             return fetchWithAuth(`/api/solutions/${solutionId}`, {
                 method: "DELETE"
+            });
+        },
+        manualUpdateScore: function(scoreDto) {
+            return fetchWithAuth("/api/judge/score", {
+                method: "PUT",
+                body: JSON.stringify(scoreDto)
             });
         },
 

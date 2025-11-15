@@ -51,6 +51,15 @@ public class TaskController {
     }
 
 
+    @PutMapping("/{taskId}")
+    public ResponseEntity<Task> updateTaskDetails(
+            @PathVariable String taskId,
+            @RequestBody Task taskDetails
+    ) {
+        Task updatedTask = taskService.updateTaskDetails(taskId, taskDetails);
+        return ResponseEntity.ok(updatedTask);
+    }
+
 
     @GetMapping()
     public ResponseEntity<List<Task>> getAllTasks() {
@@ -93,6 +102,18 @@ public class TaskController {
     ) throws IOException {
 
         Task updated = taskService.addFilesToTask(taskId, files);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping(
+            value = "/{taskId}/solution",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Task> addSolutionFile(
+            @PathVariable String taskId,
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
+        Task updated = taskService.addSolutionFileToTask(taskId, file);
         return ResponseEntity.ok(updated);
     }
 
